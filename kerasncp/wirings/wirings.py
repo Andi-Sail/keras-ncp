@@ -63,6 +63,12 @@ class Wiring:
     def get_type_of_neuron(self, neuron_id):
         return "motor" if neuron_id < self.output_dim else "inter"
 
+    def get_fan_in(self):
+      return np.sum(np.abs(self.adjacency_matrix), axis=0)
+    
+    def get_fan_out(self):
+      return np.sum(np.abs(self.adjacency_matrix), axis=1)
+
     def add_synapse(self, src, dest, polarity):
         if src < 0 or src >= self.units:
             raise ValueError(

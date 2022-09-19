@@ -16,6 +16,8 @@ from kerasncp import wirings
 import numpy as np
 from packaging.version import parse
 
+from kerasncp.tf.scaled_initializer import ScaledRandomUniform
+
 try:
     import tensorflow as tf
 except:
@@ -46,6 +48,7 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
         ode_unfolds=6,
         epsilon=1e-8,
         initialization_ranges=None,
+        consider_faninout=False,
         **kwargs
     ):
 
@@ -82,6 +85,7 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
                     )
                 self._init_ranges[k] = v
 
+        self._consider_faninout = consider_faninout
         self._wiring = wiring
         self._input_mapping = input_mapping
         self._output_mapping = output_mapping
@@ -113,15 +117,26 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
     def sensory_synapse_count(self):
         return np.sum(np.abs(self._wiring.sensory_adjacency_matrix))
 
-    def _get_initializer(self, param_name):
+    def _get_initializer(self, param_name, scaled_weights = None):
         minval, maxval = self._init_ranges[param_name]
         if minval == maxval:
             return tf.keras.initializers.Constant(minval)
         else:
-            return tf.keras.initializers.RandomUniform(minval, maxval)
+            if scaled_weights is None:
+              return tf.keras.initializers.RandomUniform(minval, maxval)
+            else:
+              return ScaledRandomUniform(scaled_weights, minval, maxval)
+
+    def _getFanInOutWeight(self):
+      fan_ins = self._wiring.get_fan_in()
+      fan_outs = self._wiring.get_fan_out()
+
+      inv_weigts = fan_ins + fan_outs
+      inv_weigts = inv_weigts + 1 * (inv_weigts==0) # avoid divide by zero, in case a neuron is not connected at all
+
+      return 2 / inv_weigts
 
     def build(self, input_shape):
-
         # Check if input_shape is nested tuple/list
         if isinstance(input_shape[0], tuple) or isinstance(
             input_shape[0], tf.TensorShape
@@ -152,7 +167,7 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
             shape=(self.state_size,),
             dtype=tf.float32,
             constraint=tf.keras.constraints.NonNeg(),
-            initializer=self._get_initializer("cm"),
+            initializer=self._get_initializer("cm", self._getFanInOutWeight() if self._consider_faninout else None),
         )
         self._params["sigma"] = self.add_weight(
             name="sigma",
