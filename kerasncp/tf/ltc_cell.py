@@ -87,6 +87,7 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
 
         self._consider_faninout = consider_faninout
         self._wiring = wiring
+        self._wiring._consider_faninout = self._consider_faninout # TODO: should be ok, but has to be set before adding weights
         self._input_mapping = input_mapping
         self._output_mapping = output_mapping
         self._ode_unfolds = ode_unfolds
@@ -127,6 +128,22 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
             else:
               return ScaledRandomUniform(scaled_weights, minval, maxval)
 
+    def _getFanInWeight(self):
+      fan_ins = self._wiring.get_fan_in()
+
+      inv_weigts = fan_ins
+      inv_weigts = inv_weigts + 1 * (inv_weigts==0) # avoid divide by zero, in case a neuron is not connected at all
+
+      return 1 / inv_weigts
+
+    def _getFanOutWeight(self):
+      fan_outs = self._wiring.get_fan_out()
+
+      inv_weigts = fan_outs
+      inv_weigts = inv_weigts + 1 * (inv_weigts==0) # avoid divide by zero, in case a neuron is not connected at all
+
+      return 1 / inv_weigts
+
     def _getFanInOutWeight(self):
       fan_ins = self._wiring.get_fan_in()
       fan_outs = self._wiring.get_fan_out()
@@ -154,7 +171,7 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
             shape=(self.state_size,),
             dtype=tf.float32,
             constraint=tf.keras.constraints.NonNeg(),
-            initializer=self._get_initializer("gleak"),
+            initializer=self._get_initializer("gleak", self._getFanOutWeight() if self._consider_faninout else None),
         )
         self._params["vleak"] = self.add_weight(
             name="vleak",
@@ -192,7 +209,7 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
             name="erev",
             shape=(self.state_size, self.state_size),
             dtype=tf.float32,
-            initializer=self._wiring.erev_initializer,
+            initializer=self._wiring.erev_initializer, # NOTE: scaled initialization considered in wiring if set so
         )
 
         self._params["sensory_sigma"] = self.add_weight(

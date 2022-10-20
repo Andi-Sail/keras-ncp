@@ -221,6 +221,7 @@ class NCP(Wiring):
         recurrent_command_synapses,
         motor_fanin,
         seed=22222,
+        consider_faninout=False,
     ):
 
         super(NCP, self).__init__(inter_neurons + command_neurons + motor_neurons)
@@ -233,6 +234,7 @@ class NCP(Wiring):
         self._inter_fanout = inter_fanout
         self._recurrent_command_synapses = recurrent_command_synapses
         self._motor_fanin = motor_fanin
+        self._consider_faninout = consider_faninout
 
         # Neuron IDs: [0..motor ... command ... inter]
         self._motor_neurons = list(range(0, self._num_motor_neurons))
@@ -269,6 +271,15 @@ class NCP(Wiring):
                     self._inter_fanout, self._num_command_neurons
                 )
             )
+
+    def erev_initializer(self, shape=None, dtype=None):
+        if self._consider_faninout:
+          return np.copy(self.adjacency_matrix) / (self.get_fan_in() + 1 * (self.get_fan_in()==0))
+
+        return np.copy(self.adjacency_matrix)
+
+    def sensory_erev_initializer(self, shape=None, dtype=None):
+        return np.copy(self.sensory_adjacency_matrix)
 
     @property
     def num_layers(self):
