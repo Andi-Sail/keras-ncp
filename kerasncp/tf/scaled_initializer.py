@@ -8,7 +8,7 @@ class ScaledRandomUniform(tf.keras.initializers.RandomUniform):
 
   def __call__(self, shape, dtype=None, **kwargs):
     orig: tf.Tensor = super().__call__(shape, dtype, **kwargs)
-    if not self.scale_weights.shape == shape:
-      raise ValueError('scaled weights are not the correct shape') # TODO: add excpected and actual
+    # if not self.scale_weights.shape == shape: # TODO: for now deactivated - assuming correct broadcast below 
+    #   raise ValueError('scaled weights are not the correct shape') # TODO: add excpected and actual
     
     return orig * self.scale_weights

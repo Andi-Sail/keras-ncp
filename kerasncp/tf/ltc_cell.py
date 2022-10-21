@@ -171,13 +171,13 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
             shape=(self.state_size,),
             dtype=tf.float32,
             constraint=tf.keras.constraints.NonNeg(),
-            initializer=self._get_initializer("gleak", self._getFanOutWeight() if self._consider_faninout else None),
+            initializer=self._get_initializer("gleak", self._getFanInOutWeight() if self._consider_faninout else None),
         )
         self._params["vleak"] = self.add_weight(
             name="vleak",
             shape=(self.state_size,),
             dtype=tf.float32,
-            initializer=self._get_initializer("vleak"),
+            initializer=self._get_initializer("vleak", self._getFanInOutWeight() if self._consider_faninout else None),
         )
         self._params["cm"] = self.add_weight(
             name="cm",
@@ -190,20 +190,20 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
             name="sigma",
             shape=(self.state_size, self.state_size),
             dtype=tf.float32,
-            initializer=self._get_initializer("sigma"),
+            initializer=self._get_initializer("sigma", self._getFanInOutWeight() if self._consider_faninout else None),
         )
         self._params["mu"] = self.add_weight(
             name="mu",
             shape=(self.state_size, self.state_size),
             dtype=tf.float32,
-            initializer=self._get_initializer("mu"),
+            initializer=self._get_initializer("mu", self._getFanInOutWeight() if self._consider_faninout else None),
         )
         self._params["w"] = self.add_weight(
             name="w",
             shape=(self.state_size, self.state_size),
             dtype=tf.float32,
             constraint=tf.keras.constraints.NonNeg(),
-            initializer=self._get_initializer("w"),
+            initializer=self._get_initializer("w", self._getFanInOutWeight() if self._consider_faninout else None),
         )
         self._params["erev"] = self.add_weight(
             name="erev",
