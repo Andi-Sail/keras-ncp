@@ -49,6 +49,7 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
         epsilon=1e-8,
         initialization_ranges=None,
         consider_faninout=False,
+        cm_regularizer=None,
         **kwargs
     ):
 
@@ -85,6 +86,7 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
                     )
                 self._init_ranges[k] = v
 
+        self._cm_regularizer = cm_regularizer
         self._consider_faninout = consider_faninout
         self._wiring = wiring
         self._wiring._consider_faninout = self._consider_faninout # TODO: should be ok, but has to be set before adding weights
@@ -185,6 +187,7 @@ class LTCCell(tf.keras.layers.AbstractRNNCell):
             dtype=tf.float32,
             constraint=tf.keras.constraints.NonNeg(),
             initializer=self._get_initializer("cm", self._getFanInOutWeight() if self._consider_faninout else None),
+            regularizer=self._cm_regularizer
         )
         self._params["sigma"] = self.add_weight(
             name="sigma",
